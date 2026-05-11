@@ -8,6 +8,7 @@ An interactive visualization of the Harvey AI [harvey-labs](https://github.com/h
 - Tailwind 4 (Vite plugin), `@tailwindcss/typography`
 - MiniSearch for client-side full-text search
 - mammoth + xlsx for build-time document snippet extraction
+- [SuperDoc](https://www.superdoc.dev/) (`superdoc` + `@superdoc-dev/react`) for in-page `.docx` / `.pdf` preview — **AGPLv3**. Our source is public, so the license is satisfied; any closed-source fork would need SuperDoc's commercial license.
 - Bun for everything (install, scripts, runtime)
 
 ## Commands
@@ -46,7 +47,7 @@ Defined in `src/lib/types.ts`. The shapes are:
 
 - `Task` — full task: title, work_type, tags, instructions, deliverables, criteria, documents, pinned `githubUrl`.
 - `Criterion` — `{ id, title, deliverables[], matchCriteria }`. Each task averages ~60 criteria, all pass/fail.
-- `DocumentEntry` — filename, ext, size, GitHub URL, optional `snippet` (first ~280 chars).
+- `DocumentEntry` — filename, ext, size, `githubUrl` (the human-facing blob page on github.com) and `rawUrl` (the binary on raw.githubusercontent.com — used by the in-page SuperDoc viewer), optional `snippet` (first ~280 chars).
 - `SearchIndexEntry` — slim subset (title, tags, practice area, work type, counts) for listings and search.
 - `PracticeAreaSummary` — slug, name, task count, scenario count, doc count, work-type histogram, top tags.
 
@@ -68,6 +69,8 @@ The `[task].astro` route uses `import.meta.glob('/src/data/tasks/*.json', { eage
 - `RubricList.tsx` — collapsible criteria with filter by deliverable.
 - `FilterBar.tsx` — search / work-type / tag filter on practice-area pages.
 - `SearchBox.tsx` — global header search. Lazy-loads `/data/index.json` on first focus, indexes with MiniSearch (boost title 3x, fuzzy 0.15, prefix match). ⌘K focuses it.
+- `DocumentList.tsx` — per-task reference-document list with "Preview" toggle for `.docx` / `.pdf`. Hydrated `client:visible`. Renders `DocumentViewer.tsx` lazily (via `React.lazy`) when a preview opens.
+- `DocumentViewer.tsx` — mounts `@superdoc-dev/react` in viewer mode (`documentMode="viewing"`, `role="viewer"`, `hideToolbar`, `contained`). Caches the SuperDoc dynamic import in a module-level promise so opening multiple previews on the same page only fetches the SuperDoc chunk once. Fetches the doc from `rawUrl` → Blob → File, then hands the File to `<SuperDocEditor>`.
 
 ## Deploy
 
@@ -81,7 +84,7 @@ If upstream introduces a schema-breaking change, the validation step fails and t
 
 ## Notes
 
-- Documents are **not** redistributed. Every `githubUrl` points back to the pinned upstream SHA. GitHub renders `.docx`/`.xlsx`/`.pdf` natively in their viewer, which is why we don't ship an in-page document viewer.
+- Documents are **not** redistributed. We don't bundle the binaries. The in-page SuperDoc viewer fetches `.docx` / `.pdf` directly from `raw.githubusercontent.com` at view time (CORS works because GitHub raw sets `access-control-allow-origin: *` for public files). The "Open" link still goes to the GitHub blob page so any file type — `.xlsx`, `.eml`, `.txt`, `.md` — falls back to GitHub's native viewer.
 - `task.json` files use `match_criteria` (snake case) and `work_type` (snake case) upstream; we normalize to `matchCriteria` and `workType` in our types.
 - **Tailwind v4 cascade-layer gotcha**: any global element-selector overrides in `src/styles/global.css` (e.g. `a { color: inherit }`) MUST be wrapped in `@layer base { … }`. `@import "tailwindcss"` puts utilities in the `utilities` layer, and *unlayered* CSS beats every layered style regardless of selector specificity — so an unlayered `a { color: inherit }` will silently kill `text-white` (or any `text-*`) on every `<a>` tag, including dark CTA buttons. Symptom: button appears as a solid filled rectangle with invisible text.
 - Astro dev mode caches errors aggressively in its HMR overlay. If you see a "ghost" error after fixing the underlying issue, restart `bun run dev` and clear `.astro/` and `node_modules/.vite/`.

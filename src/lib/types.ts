@@ -22,6 +22,7 @@ export type DocumentEntry = {
   ext: string;
   sizeBytes: number;
   githubUrl: string;
+  rawUrl: string;
   previewType: DocumentPreviewType;
   previewPath?: string;
   snippet?: string;

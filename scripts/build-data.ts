@@ -53,6 +53,10 @@ function githubBlobUrl(relPath: string): string {
   return `https://github.com/${UPSTREAM_REPO}/blob/${UPSTREAM_SHA}/${relPath}`;
 }
 
+function githubRawUrl(relPath: string): string {
+  return `https://raw.githubusercontent.com/${UPSTREAM_REPO}/${UPSTREAM_SHA}/${relPath}`;
+}
+
 async function listDir(p: string): Promise<string[]> {
   try {
     return await readdir(p);
@@ -99,6 +103,7 @@ async function readDocuments(
       ext,
       sizeBytes: st.size,
       githubUrl: githubBlobUrl(relPath),
+      rawUrl: githubRawUrl(relPath),
       previewType,
       snippet,
     });
