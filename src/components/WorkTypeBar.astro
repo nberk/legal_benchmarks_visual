@@ -1,0 +1,54 @@
+---
+import type { WorkType, WorkTypeHistogram } from "@/lib/types";
+
+interface Props {
+  histogram: WorkTypeHistogram;
+  showLabels?: boolean;
+  height?: number;
+}
+
+const { histogram, showLabels = false, height = 6 } = Astro.props;
+
+const order: WorkType[] = ["analyze", "draft", "review", "research"];
+const colors: Record<WorkType, string> = {
+  analyze: "var(--color-accent-700)",
+  draft: "var(--color-accent-500)",
+  review: "var(--color-accent-300)",
+  research: "var(--color-ink-400)",
+};
+const total = order.reduce((s, k) => s + histogram[k], 0) || 1;
+const segments = order.map((w) => ({
+  workType: w,
+  count: histogram[w],
+  pct: (histogram[w] / total) * 100,
+  color: colors[w],
+}));
+---
+
+<div class="flex flex-col gap-1.5">
+  <div
+    class="flex w-full overflow-hidden rounded-full"
+    style={`height: ${height}px;`}
+  >
+    {segments.map((s) => s.pct > 0 && (
+      <div
+        title={`${s.workType}: ${s.count}`}
+        style={`width: ${s.pct}%; background: ${s.color};`}
+      ></div>
+    ))}
+  </div>
+  {showLabels && (
+    <div class="flex gap-3 flex-wrap text-[11px] text-ink-500">
+      {segments.map((s) => s.count > 0 && (
+        <span class="inline-flex items-center gap-1.5">
+          <span
+            class="inline-block w-2 h-2 rounded-sm"
+            style={`background: ${s.color};`}
+          ></span>
+          <span class="capitalize">{s.workType}</span>
+          <span class="text-ink-400 font-mono">{s.count}</span>
+        </span>
+      ))}
+    </div>
+  )}
+</div>

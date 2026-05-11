@@ -1,0 +1,16 @@
+---
+interface Props {
+  label: string;
+  value: string | number;
+  sublabel?: string;
+}
+
+const { label, value, sublabel } = Astro.props;
+const formatted = typeof value === "number" ? value.toLocaleString() : value;
+---
+
+<div class="border border-[var(--rule)] bg-white rounded-lg px-5 py-4">
+  <div class="text-[11px] uppercase tracking-wider text-ink-500 font-medium">{label}</div>
+  <div class="mt-2 font-display text-3xl font-semibold text-ink-900 tabular-nums">{formatted}</div>
+  {sublabel && <div class="mt-1 text-[12px] text-ink-500">{sublabel}</div>}
+</div>

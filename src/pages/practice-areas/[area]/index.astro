@@ -1,0 +1,80 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import BreadcrumbNav from "@/components/BreadcrumbNav.astro";
+import WorkTypeBar from "@/components/WorkTypeBar.astro";
+import FilterBar from "@/components/FilterBar.tsx";
+import categories from "@/data/categories.json";
+import index from "@/data/index.json";
+import type { PracticeAreaSummary, SearchIndexEntry } from "@/lib/types";
+
+export function getStaticPaths() {
+  const all = categories as PracticeAreaSummary[];
+  return all.map((a) => ({ params: { area: a.slug } }));
+}
+
+const { area: areaSlug } = Astro.params as { area: string };
+const all = categories as PracticeAreaSummary[];
+const area = all.find((a) => a.slug === areaSlug);
+if (!area) throw new Error(`Unknown practice area: ${areaSlug}`);
+
+const allTasks = index as SearchIndexEntry[];
+const tasks = allTasks.filter((t) => t.practiceArea === areaSlug);
+tasks.sort((a, b) => a.title.localeCompare(b.title));
+---
+
+<Layout
+  title={area.name}
+  description={`${area.taskCount} tasks in ${area.name} from the harvey-labs benchmark.`}
+>
+  <section class="max-w-7xl mx-auto px-6 pt-8 pb-12">
+    <BreadcrumbNav
+      crumbs={[
+        { label: "Home", href: "/" },
+        { label: "Practice areas", href: "/practice-areas" },
+        { label: area.name },
+      ]}
+    />
+    <div class="mt-3 flex items-end justify-between gap-6 flex-wrap">
+      <div>
+        <h1 class="font-display text-3xl md:text-4xl font-semibold tracking-tight text-ink-900">
+          {area.name}
+        </h1>
+        <p class="mt-2 text-[14px] text-ink-500">
+          <span class="font-mono tabular-nums text-ink-700">{area.taskCount}</span> tasks
+          {area.scenarioCount !== area.taskCount && (
+            <>
+              <span class="text-ink-300 mx-1.5">·</span>
+              <span class="font-mono tabular-nums text-ink-700">{area.scenarioCount}</span> scenarios
+            </>
+          )}
+          <span class="text-ink-300 mx-1.5">·</span>
+          <span class="font-mono tabular-nums text-ink-700">{area.documentCount.toLocaleString()}</span> reference documents
+        </p>
+      </div>
+      <div class="min-w-[260px] flex-1 max-w-xs">
+        <WorkTypeBar histogram={area.workTypes} showLabels />
+      </div>
+    </div>
+
+    {area.topTags.length > 0 && (
+      <div class="mt-5 flex flex-wrap gap-1.5">
+        {area.topTags.map((t) => (
+          <span class="text-[11px] text-ink-600 px-2 py-1 rounded bg-ink-50 border border-ink-100">
+            {t.tag}
+            <span class="ml-1 text-ink-400 font-mono">{t.count}</span>
+          </span>
+        ))}
+      </div>
+    )}
+
+    <div class="mt-10">
+      <div class="flex items-baseline justify-between gap-4 mb-4 border-t border-[var(--rule)] pt-6">
+        <h2 class="font-display text-[18px] font-semibold tracking-tight text-ink-900">
+          Tasks
+        </h2>
+        <p class="text-[12.5px] text-ink-500">Each task has a full pass/fail rubric and source documents.</p>
+      </div>
+      <FilterBar client:load tasks={tasks} practiceArea={areaSlug} />
+    </div>
+  </section>
+</Layout>

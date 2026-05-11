@@ -1,0 +1,48 @@
+---
+import type { SearchIndexEntry } from "@/lib/types";
+import { WORK_TYPE_LABEL } from "@/lib/practice-areas";
+
+interface Props {
+  task: SearchIndexEntry;
+}
+
+const { task } = Astro.props;
+const scenarioPath = task.scenarioId ? `${task.taskSlug}--${task.scenarioId}` : task.taskSlug;
+const href = `/practice-areas/${task.practiceArea}/${scenarioPath}`;
+const wtColors: Record<string, string> = {
+  analyze: "bg-accent-100 text-accent-700",
+  draft: "bg-accent-50 text-accent-600",
+  review: "bg-ink-100 text-ink-700",
+  research: "bg-ink-50 text-ink-700",
+};
+---
+
+<a
+  href={href}
+  class="block border border-[var(--rule)] bg-white rounded-lg p-4 hover:border-ink-300 hover:shadow-sm transition group"
+>
+  <div class="flex items-center gap-2 mb-2.5">
+    <span class={`text-[11px] font-medium px-1.5 py-0.5 rounded ${wtColors[task.workType] ?? "bg-ink-100 text-ink-700"}`}>
+      {WORK_TYPE_LABEL[task.workType]}
+    </span>
+    {task.scenarioId && (
+      <span class="text-[11px] text-ink-500 font-mono">{task.scenarioId.replace("scenario-", "S")}</span>
+    )}
+    <span class="ml-auto text-[11px] text-ink-400 font-mono tabular-nums">
+      {task.criterionCount} criteria · {task.documentCount} docs
+    </span>
+  </div>
+  <h3 class="font-medium text-[14px] leading-snug text-ink-900 group-hover:text-accent-700 transition">
+    {task.title}
+  </h3>
+  {task.tags.length > 0 && (
+    <div class="mt-2.5 flex flex-wrap gap-1">
+      {task.tags.slice(0, 6).map((t) => (
+        <span class="text-[10.5px] text-ink-500 px-1.5 py-0.5 rounded bg-ink-50 border border-ink-100">{t}</span>
+      ))}
+      {task.tags.length > 6 && (
+        <span class="text-[10.5px] text-ink-400">+{task.tags.length - 6}</span>
+      )}
+    </div>
+  )}
+</a>

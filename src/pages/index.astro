@@ -1,0 +1,67 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import StatCard from "@/components/StatCard.astro";
+import PracticeAreaCard from "@/components/PracticeAreaCard.astro";
+import WorkTypeBar from "@/components/WorkTypeBar.astro";
+import summary from "@/data/summary.json";
+import categories from "@/data/categories.json";
+import type { PracticeAreaSummary, WorkTypeHistogram } from "@/lib/types";
+
+const areas = categories as PracticeAreaSummary[];
+const histogram = summary.workTypes as WorkTypeHistogram;
+const topAreas = [...areas].sort((a, b) => b.taskCount - a.taskCount);
+---
+
+<Layout title="Legal Benchmarks Explorer">
+  <section class="border-b border-[var(--rule)]">
+    <div class="max-w-7xl mx-auto px-6 pt-14 pb-12">
+      <p class="text-[12px] uppercase tracking-[0.18em] text-ink-500 font-medium">Harvey AI Legal Agent Benchmark</p>
+      <h1 class="mt-3 font-display text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05] text-ink-900 max-w-3xl">
+        Browse {summary.totalTasks.toLocaleString()} real legal tasks across {summary.totalPracticeAreas} practice areas.
+      </h1>
+      <p class="mt-5 text-[15.5px] text-ink-600 leading-relaxed max-w-2xl">
+        Every task in the open <a class="underline decoration-ink-300 hover:decoration-accent-500" href="https://github.com/harveyai/harvey-labs" target="_blank" rel="noopener">harvey-labs</a> benchmark, drillable to the prompt, full rubric, and reference documents the model is expected to consult.
+      </p>
+      <div class="mt-7 flex flex-wrap gap-3">
+        <a href="/practice-areas" class="inline-flex items-center gap-2 bg-ink-900 text-white text-[13px] font-medium px-4 py-2 rounded-md hover:bg-ink-700 transition">
+          Browse practice areas
+          <span aria-hidden>→</span>
+        </a>
+        <a href="/biglaw-bench" class="inline-flex items-center gap-2 border border-ink-200 bg-white text-[13px] font-medium px-4 py-2 rounded-md hover:border-ink-400 transition">
+          What is BigLawBench?
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="max-w-7xl mx-auto px-6 py-12">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+      <StatCard label="Tasks" value={summary.totalTasks} sublabel={`${summary.totalScenarios.toLocaleString()} scenarios`} />
+      <StatCard label="Practice areas" value={summary.totalPracticeAreas} sublabel="legal specialties" />
+      <StatCard label="Rubric criteria" value={summary.totalCriteria} sublabel={`avg ${Math.round(summary.totalCriteria / summary.totalScenarios)} per task`} />
+      <StatCard label="Reference docs" value={summary.totalDocuments} sublabel=".docx, .xlsx, .pdf, .eml" />
+    </div>
+
+    <div class="border border-[var(--rule)] bg-white rounded-lg p-5 mb-10">
+      <div class="flex items-center justify-between gap-4 mb-3">
+        <h2 class="font-display text-[16px] font-semibold text-ink-900">Work type breakdown</h2>
+        <p class="text-[12px] text-ink-500">Across all {summary.totalScenarios.toLocaleString()} scenarios</p>
+      </div>
+      <WorkTypeBar histogram={histogram} showLabels height={10} />
+    </div>
+
+    <div class="flex items-baseline justify-between mb-5 gap-4">
+      <div>
+        <h2 class="font-display text-[22px] font-semibold tracking-tight text-ink-900">Largest practice areas</h2>
+        <p class="mt-1 text-[12.5px] text-ink-500">Top 9 of {summary.totalPracticeAreas}, ranked by number of tasks.</p>
+      </div>
+      <a href="/practice-areas" class="text-[13px] text-ink-600 hover:text-ink-900 underline decoration-ink-300 shrink-0">View all {summary.totalPracticeAreas} →</a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {topAreas.slice(0, 9).map((area) => (
+        <PracticeAreaCard area={area} />
+      ))}
+    </div>
+  </section>
+</Layout>

@@ -1,0 +1,29 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import PracticeAreaCard from "@/components/PracticeAreaCard.astro";
+import BreadcrumbNav from "@/components/BreadcrumbNav.astro";
+import categories from "@/data/categories.json";
+import summary from "@/data/summary.json";
+import type { PracticeAreaSummary } from "@/lib/types";
+
+const areas = categories as PracticeAreaSummary[];
+const sorted = [...areas].sort((a, b) => a.name.localeCompare(b.name));
+---
+
+<Layout title="Practice areas" description={`All ${summary.totalPracticeAreas} legal practice areas in the harvey-labs benchmark.`}>
+  <section class="max-w-7xl mx-auto px-6 pt-8 pb-12">
+    <BreadcrumbNav crumbs={[{ label: "Home", href: "/" }, { label: "Practice areas" }]} />
+    <h1 class="mt-3 font-display text-3xl md:text-4xl font-semibold tracking-tight text-ink-900">
+      Practice areas
+    </h1>
+    <p class="mt-3 text-[15px] text-ink-600 max-w-2xl">
+      The 24 legal specialties covered by the benchmark, ordered alphabetically. Click into any area to see its tasks.
+    </p>
+
+    <div class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {sorted.map((area) => (
+        <PracticeAreaCard area={area} />
+      ))}
+    </div>
+  </section>
+</Layout>

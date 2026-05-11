@@ -1,0 +1,32 @@
+---
+import WorkTypeBar from "./WorkTypeBar.astro";
+import type { PracticeAreaSummary } from "@/lib/types";
+
+interface Props {
+  area: PracticeAreaSummary;
+}
+
+const { area } = Astro.props;
+---
+
+<a
+  href={`/practice-areas/${area.slug}`}
+  class="block border border-[var(--rule)] bg-white rounded-lg p-5 hover:border-ink-300 hover:shadow-sm transition group"
+>
+  <div class="flex items-start justify-between gap-3 mb-3">
+    <h3 class="font-display text-[17px] font-semibold leading-tight text-ink-900 group-hover:text-accent-700 transition">
+      {area.name}
+    </h3>
+    <div class="text-right shrink-0">
+      <div class="font-mono text-[18px] font-medium text-ink-900 tabular-nums leading-none">{area.taskCount}</div>
+      <div class="text-[10px] uppercase tracking-wider text-ink-400 mt-1">tasks</div>
+    </div>
+  </div>
+  <div class="text-[12px] text-ink-500 flex flex-wrap gap-x-3 gap-y-1 mb-3">
+    {area.scenarioCount !== area.taskCount && (
+      <span><span class="font-mono">{area.scenarioCount}</span> scenarios</span>
+    )}
+    <span><span class="font-mono">{area.documentCount.toLocaleString()}</span> documents</span>
+  </div>
+  <WorkTypeBar histogram={area.workTypes} />
+</a>

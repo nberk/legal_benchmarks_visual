@@ -1,0 +1,26 @@
+---
+import summary from "@/data/summary.json";
+const sha = (summary.upstreamSha ?? "").slice(0, 7);
+const generated = summary.generatedAt ? new Date(summary.generatedAt) : null;
+const gen = generated
+  ? generated.toISOString().slice(0, 10)
+  : null;
+---
+
+<footer class="mt-24 border-t border-[var(--rule)] py-8 text-[12px] text-ink-500">
+  <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+    <p>
+      An independent visualization of Harvey AI's open
+      <a class="underline decoration-ink-300 hover:decoration-accent-500" href="https://github.com/harveyai/harvey-labs" target="_blank" rel="noopener">harvey-labs</a>
+       benchmark. Not affiliated with or endorsed by Harvey.
+    </p>
+    <p class="font-mono">
+      {gen && <>Data {gen} · </>}
+      {sha && (
+        <a href={`https://github.com/${summary.upstreamRepo}/tree/${summary.upstreamSha}`} target="_blank" rel="noopener" class="hover:text-ink-900">
+          {summary.upstreamRepo}@{sha}
+        </a>
+      )}
+    </p>
+  </div>
+</footer>
