@@ -73,6 +73,12 @@ The `[task].astro` route uses `import.meta.glob('/src/data/tasks/*.json', { eage
 
 Static export to Cloudflare Pages. Build command: `bun run build`, output: `dist/`. The submodule is checked out by CI when "submodules: true" is enabled in the Pages project settings. Refresh cadence is whatever the operator wants — `bun run data:refresh` updates the submodule and rebuilds.
 
+## Data refresh automation
+
+`.github/workflows/refresh-data.yml` runs weekly (Mondays 12:00 UTC) and on manual dispatch. It bumps the `vendor/harvey-labs` submodule to upstream HEAD, runs `bun run data:build` (with `EXTRACT_SNIPPETS=0`) to validate the new data parses against the Zod schema, then opens a PR titled `chore(data): refresh harvey-labs submodule` on branch `chore/refresh-data`. Merging the PR ships the refresh; the full snippet extraction happens in the Cloudflare Pages production build, not in the Action (keeps CI fast).
+
+If upstream introduces a schema-breaking change, the validation step fails and the PR is not opened — diagnose by re-running the workflow with `workflow_dispatch` and reading the job log.
+
 ## Notes
 
 - Documents are **not** redistributed. Every `githubUrl` points back to the pinned upstream SHA. GitHub renders `.docx`/`.xlsx`/`.pdf` natively in their viewer, which is why we don't ship an in-page document viewer.

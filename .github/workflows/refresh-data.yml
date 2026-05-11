@@ -1,0 +1,131 @@
+name: Refresh harvey-labs data
+
+# Bumps the vendor/harvey-labs submodule to upstream HEAD, validates that the
+# new task.json files still parse against our Zod schema, and opens (or
+# updates) a PR with the submodule bump. Merging the PR ships the refresh —
+# operator stays in the loop so an upstream schema break doesn't auto-deploy.
+
+on:
+  schedule:
+    # Mondays 12:00 UTC (mid-morning Pacific). Cron is in UTC.
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          # Full history so create-pull-request can detect changes cleanly.
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Bump submodule to upstream HEAD
+        id: bump
+        run: |
+          set -euo pipefail
+          git submodule update --remote vendor/harvey-labs
+          OLD_SHA=$(git rev-parse "HEAD:vendor/harvey-labs")
+          NEW_SHA=$(git -C vendor/harvey-labs rev-parse HEAD)
+          echo "old_sha=$OLD_SHA" >> "$GITHUB_OUTPUT"
+          echo "new_sha=$NEW_SHA" >> "$GITHUB_OUTPUT"
+          if [ "$OLD_SHA" = "$NEW_SHA" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Already at upstream HEAD ($NEW_SHA). Nothing to do."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Bumping vendor/harvey-labs: $OLD_SHA -> $NEW_SHA"
+          fi
+
+      - name: Validate refreshed data against schema
+        if: steps.bump.outputs.changed == 'true'
+        # Skip the ~3-minute snippet extraction pass — schema validation is
+        # what catches breaking upstream changes, and the schema is enforced
+        # before snippets are touched.
+        env:
+          EXTRACT_SNIPPETS: "0"
+        run: bun run data:build
+
+      - name: Generate PR body
+        if: steps.bump.outputs.changed == 'true'
+        id: body
+        # SHAs are passed via env (not inlined into the script) so attacker-
+        # controlled values can't escape into the shell. (Here they're
+        # guaranteed-safe hex output from git rev-parse, but this is the
+        # general pattern — see
+        # https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/)
+        env:
+          OLD_SHA: ${{ steps.bump.outputs.old_sha }}
+          NEW_SHA: ${{ steps.bump.outputs.new_sha }}
+        run: |
+          set -euo pipefail
+          SHORT_OLD="${OLD_SHA:0:7}"
+          SHORT_NEW="${NEW_SHA:0:7}"
+          # Upstream commit messages are attacker-controlled (anyone who can
+          # land a PR in harvey-labs can influence them). Render them inside
+          # a fenced code block so backticks/markdown in their messages can't
+          # alter the PR body structure, and use a random heredoc delimiter
+          # so a message can't terminate $GITHUB_OUTPUT early.
+          COMMITS=$(git -C vendor/harvey-labs log \
+            --pretty=format:'%h %s' \
+            "${OLD_SHA}..${NEW_SHA}" | head -50)
+          DELIM="EOF_$(openssl rand -hex 16)"
+          {
+            echo "body<<${DELIM}"
+            echo "Bumps \`vendor/harvey-labs\` from \`${SHORT_OLD}\` to \`${SHORT_NEW}\`."
+            echo ""
+            echo "**Compare:** https://github.com/harveyai/harvey-labs/compare/${OLD_SHA}...${NEW_SHA}"
+            echo ""
+            echo "### Upstream commits"
+            echo '```'
+            if [ -n "${COMMITS}" ]; then
+              echo "${COMMITS}"
+            else
+              echo "(no commit summaries available)"
+            fi
+            echo '```'
+            echo ""
+            echo "### Validation"
+            echo "\`bun run data:build\` (with \`EXTRACT_SNIPPETS=0\`) passed against the new SHA — all task.json files parse against the Zod schema in \`src/lib/schema.ts\`."
+            echo ""
+            echo "Merge to refresh the published site. The Cloudflare Pages production build runs the full \`bun run build\`, which re-extracts document snippets on the new SHA."
+            echo "${DELIM}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open or update PR
+        if: steps.bump.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          # Only the submodule pointer should change; generated data files
+          # are gitignored. Restrict the add list defensively.
+          add-paths: |
+            vendor/harvey-labs
+          commit-message: |
+            Bump vendor/harvey-labs to ${{ steps.bump.outputs.new_sha }}
+
+            Refreshed upstream task data. Schema validation passed.
+          branch: chore/refresh-data
+          delete-branch: true
+          title: "chore(data): refresh harvey-labs submodule"
+          body: ${{ steps.body.outputs.body }}
+          labels: |
+            data-refresh
+            automated
